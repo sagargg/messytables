@@ -237,7 +237,7 @@ class DateUtilType(CellType):
     def cast(self, value):
         if value in ('', None):
             return None
-        return parser.parse(value)
+        return parser.parse(value, dayfirst= True)
 
 
 TYPES = [StringType, DecimalType, IntegerType, DateType, BoolType,
