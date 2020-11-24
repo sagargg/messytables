@@ -5,6 +5,7 @@ from messytables.compat23 import izip_longest, unicode_string, string_types
 import locale
 import sys
 
+import re
 import dateutil.parser as parser
 
 from messytables.dateparser import DATE_FORMATS, is_date
@@ -228,6 +229,30 @@ class DateUtilType(CellType):
     guessing_weight = 3
     result_type = datetime.datetime
 
+    def is_valid_yyyymmmddd(self, value):
+        rule = \
+            r"^\d{4}\/(0[1-9]|1[012])\/(0[1-9]|[12][0-9]|3[01])$"
+        match_yyyymmmddd = re.compile(rule).match
+
+        try:
+            if match_yyyymmmddd(value) is not None:
+                return True
+        except:
+
+            pass
+        return False
+
+    def is_valid_iso_date(self, value):
+        rule = \
+            r"^([+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|0[1-9]|3[01]))?|W([0-4]\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\d|[12]\d{2}|3([0-5]\d|6[1-6])))([T\s]((([01]\d|2[0-3])((:?)[0-5]\d)?|24\:?00)([\.,]\d+(?!:))?)?(\17[0-5]\d([\.,]\d+)?)?([zZ]|([\+-])([01]\d|2[0-3]):?([0-5]\d)?)?)?)?$"
+        match_iso8601 = re.compile(rule).match
+        try:
+            if match_iso8601(value) is not None:
+                return True
+        except:
+            pass
+        return False
+
     def test(self, value):
         if not(isinstance(value, datetime.datetime) or
                (isinstance(value, string_types) and is_date(value))):
@@ -237,7 +262,13 @@ class DateUtilType(CellType):
     def cast(self, value):
         if value in ('', None):
             return None
-        return parser.parse(value)
+        elif self.is_valid_iso_date(value):
+            return parser.isoparse(value)
+        elif self.is_valid_yyyymmmddd(value):
+            # For check date is in YYYY/MM/DD Format
+            return parser.parse(value, dayfirst=False, fuzzy=True)
+        else:
+            return parser.parse(value, dayfirst=True, fuzzy=True)
 
 
 TYPES = [StringType, DecimalType, IntegerType, DateType, BoolType,
